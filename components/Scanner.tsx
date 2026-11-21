@@ -31,9 +31,14 @@ export default function Scanner({ onScan, onClose }: { onScan: (code: string, fo
     scanner.start({ facingMode: 'environment' }, config, (decodedText) => {
       if (!active) return;
       if (navigator.vibrate) navigator.vibrate(60);
-      scanner.stop().catch(() => {}).finally(() => { onScanRef.current(decodedText.trim(), 'CODE'); });
+      try { scanner.stop(); } catch {}
+      onScanRef.current(decodedText.trim(), 'CODE');
     }, () => {}).then(() => setTimeout(() => applyZoom(2), 500)).catch((e) => { if (active) setError(e instanceof Error ? e.message : 'Kamera tidak dapat dibuka'); });
-    return () => { active = false; scannerRef.current?.stop().catch(() => {}); scannerRef.current?.clear().catch(() => {}); };
+    return () => {
+      active = false;
+      try { scanner.stop(); } catch {}
+      try { scanner.clear(); } catch {}
+    };
   }, []);
   const toggleTorch = async () => {
     const video = document.querySelector('#reader video') as HTMLVideoElement;
@@ -42,13 +47,17 @@ export default function Scanner({ onScan, onClose }: { onScan: (code: string, fo
     if (!track || !caps?.torch) { setError('Flash tidak didukung'); return; }
     try { await track.applyConstraints({ advanced: [{ torch: !torchOn } as any] }); setTorchOn(!torchOn); } catch {}
   };
+  const handleClose = () => {
+    try { scannerRef.current?.stop(); } catch {}
+    onClose();
+  };
   return (
     <div className="fixed inset-0 z-50 bg-black text-white flex flex-col">
-      <div className="flex justify-between items-center p-4"><b>SCAN BARCODE</b><button className="rounded-xl bg-white/15 px-4 py-2" onClick={async () => { await scannerRef.current?.stop().catch(() => {}); onClose(); }}>✕</button></div>
+      <div className="flex justify-between items-center p-4"><b>SCAN BARCODE</b><button className="rounded-xl bg-white/15 px-4 py-2" onClick={handleClose}>✕</button></div>
       <div className="relative flex-1 flex items-center justify-center overflow-hidden bg-black"><div id="reader" className="w-full h-full [&>video]:!w-full [&>video]:!h-full [&>video]:object-cover" /></div>
       <div className="pb-3 flex justify-center"><div className="flex bg-white/15 rounded-full p-1 gap-1">{[1, 2, 3].map((z) => (<button key={z} onClick={() => applyZoom(z)} className={`w-11 h-11 rounded-full font-bold ${zoom === z ? 'bg-white text-black' : 'text-white'}`}>{z}x</button>))}<button onClick={toggleTorch} className={`w-11 h-11 rounded-full ${torchOn ? 'bg-yellow-400 text-black' : 'text-white'}`}>💡</button></div></div>
       <p className="text-center text-sm pb-4 text-white/70">Arahkan kamera ke barcode</p>
       {error && <div className="mx-4 mb-4 bg-red-700 rounded-xl p-3 text-sm">{error}</div>}
     </div>
   );
-      }
+}
