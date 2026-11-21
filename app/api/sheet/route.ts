@@ -20,12 +20,14 @@ export async function POST(request: Request) {
       status: response.ok ? 200 : 502,
     });
   } catch (error) {
-    return Response.json(
-      {
-        ok: false,
-        error: error.message || "Gagal mengirim data ke Google Sheet",
-      },
-      { status: 500 }
-    );
+  return Response.json(
+    {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Gagal mengirim data ke Google Sheet",
+    },
+    { status: 500 }
+  );
   }
-}
