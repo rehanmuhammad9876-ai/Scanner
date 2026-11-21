@@ -32,7 +32,8 @@ export default function Scanner({ onScan, onClose }: { onScan: (code: string, fo
       if (!active) return;
       if (navigator.vibrate) navigator.vibrate(60);
       try { scanner.stop(); } catch {}
-      onScanRef.current(decodedText.trim(), 'CODE');
+      const clean = decodedText.trim().replace(/^[\]\)]C[01]/, '');
+onScanRef.current(clean, 'CODE')
     }, () => {}).then(() => setTimeout(() => applyZoom(2), 500)).catch((e) => { if (active) setError(e instanceof Error ? e.message : 'Kamera tidak dapat dibuka'); });
     return () => {
       active = false;
