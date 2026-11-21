@@ -1,0 +1,3 @@
+'use client';
+import { useEffect, useState } from 'react';
+export default function InstallPWA() { const [prompt, setPrompt] = useState<Event & {prompt?: () => Promise<void>; userChoice?: Promise<{outcome:string}>} | null>(null); useEffect(() => { const listener = (event: Event) => { event.preventDefault(); setPrompt(event as Event & {prompt?: () => Promise<void>; userChoice?: Promise<{outcome:string}>}); }; window.addEventListener('beforeinstallprompt', listener); return () => window.removeEventListener('beforeinstallprompt', listener); }, []); if (!prompt) return null; return <button onClick={async () => { await prompt.prompt?.(); setPrompt(null); }} className="rounded-xl bg-indigo-700 text-white px-4 py-3 font-bold">Install App</button>; }
