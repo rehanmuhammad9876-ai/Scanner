@@ -1,5 +1,5 @@
 const SHEET_NAME = "PRICE_LABEL_SCAN";
-const SPREADSHEET_ID = "AKfycbybGwVRMmOg0GJCm4NqRDFmJqI1u6aDvpyb9d7DAtrPDtgvvKl4HOaGIeQ655dE7W-8W-8";
+const SPREADSHEET_ID = "1b2DIiOFUoIMAooAm1jLCY7kssIP8aHzkrMHm45F-7so";
 function json(data) {
   return ContentService
     .createTextOutput(JSON.stringify(data))
