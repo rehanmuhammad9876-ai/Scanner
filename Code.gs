@@ -1,23 +1,64 @@
-const SHEET_NAME = 'PRICE_LABEL_SCAN';
+const SHEET_NAME = "PRICE_LABEL_SCAN";
+const SPREADSHEET_ID = "1b2D1OFuoINAooAm1jLCY7kssIP8aHzkrMhM45F-7so";
+
+function json(data) {
+  return ContentService
+    .createTextOutput(JSON.stringify(data))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
 function doPost(e) {
   try {
-    const body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
-    if (body.action === 'ping') return json({ok:true, message:'Apps Script connected'});
-    const shelf = String(body.shelf || '').trim();
-    const barcode = String(body.barcode || '').trim();
-    const format = String(body.format || '');
-    const timestamp = body.timestamp ? new Date(body.timestamp) : new Date();
-    if (!shelf || !barcode) return json({ok:false, error:'Shelf and barcode required'});
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    let sheet = ss.getSheetByName(SHEET_NAME);
-    if (!sheet) sheet = ss.insertSheet(SHEET_NAME);
-    if (sheet.getLastRow() === 0) sheet.appendRow(['Tanggal','Jam','Shelf','Barcode','Format Lengkap']);
-    const dateText = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), 'yyyy-MM-dd');
-    const timeText = Utilities.formatDate(timestamp, Session.getScriptTimeZone(), 'HH:mm:ss');
-    const complete = `S,${shelf},${barcode}`;
-    sheet.appendRow([dateText,timeText,shelf,barcode,complete + (format.startsWith('STOCK_TAKE_QTY:') ? ` | ${format}` : '')]);
-    return json({ok:true});
-  } catch (err) { return json({ok:false, error:String(err)}); }
+    const body = JSON.parse(e.postData.contents || "{}");
+
+    if (body.action === "ping") {
+      return json({ ok: true, message: "Koneksi berhasil" });
+    }
+
+    const shelf = String(body.shelf || "").trim();
+    const barcode = String(body.barcode || body.sku || "").trim();
+
+    if (!shelf || !barcode) {
+      return json({
+        ok: false,
+        error: "Shelf atau barcode kosong",
+        shelf: shelf,
+        barcode: barcode
+      });
+    }
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_ID);
+
+    const sheet = ss.getSheetByName(SHEET_NAME);
+
+    if (!sheet) {
+      return json({
+        ok: false,
+        error: "Sheet tidak ditemukan: " + SHEET_NAME,
+        sheets: ss.getSheets().map(s => s.getName())
+      });
+    }
+
+    sheet.appendRow([shelf, barcode]);
+
+    return json({
+      ok: true,
+      message: "Data berhasil disimpan",
+      shelf: shelf,
+      barcode: barcode
+    });
+
+  } catch (err) {
+    return json({
+      ok: false,
+      error: err.message || String(err)
+    });
+  }
 }
-function doGet() { return json({ok:true, service:'Price Label Scanner Sheet API'}); }
-function json(data) { return ContentService.createTextOutput(JSON.stringify(data)).setMimeType(ContentService.MimeType.JSON); }
+
+function doGet() {
+  return json({
+    ok: true,
+    message: "Apps Script aktif"
+  });
+}
