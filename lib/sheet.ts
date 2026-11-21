@@ -1,4 +1,3 @@
-
 export type ScanPayload = {
   shelf: string;
   barcode: string;
@@ -12,58 +11,33 @@ export type SheetResult = {
 };
 
 export function getSheetUrl(): string {
-  if (typeof window === 'undefined') {
-    return process.env.NEXT_PUBLIC_SHEET_API_URL ?? '';
-  }
-
-  return (
-    localStorage.getItem('pls_sheet_url') ||
-    process.env.NEXT_PUBLIC_SHEET_API_URL ||
-    ''
-  );
+  return "/api/sheet";
 }
 
 export async function sendScan(
   payload: ScanPayload
 ): Promise<SheetResult> {
-  const url = getSheetUrl();
-
-  if (!url) {
-    return {
-      ok: false,
-      message: 'URL Google Sheet belum diatur',
-    };
-  }
-
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      mode: 'cors',
+    const response = await fetch(getSheetUrl(), {
+      method: "POST",
       headers: {
-        'Content-Type': 'text/plain;charset=utf-8',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify(payload),
     });
 
-    const result = await response.json().catch(() => null);
+    const result = await response.json();
 
-    if (!response.ok) {
+    if (!response.ok || result?.ok === false) {
       return {
         ok: false,
-        message: `HTTP ${response.status}`,
-      };
-    }
-
-    if (result?.ok === false) {
-      return {
-        ok: false,
-        message: result.error || result.message || 'Apps Script menolak data',
+        message: result?.error || result?.message || "Gagal menyimpan data",
       };
     }
 
     return {
       ok: true,
-      message: result?.message || 'Data berhasil dikirim',
+      message: result?.message || "Data berhasil dikirim ke Google Sheet",
     };
   } catch (error) {
     return {
@@ -71,7 +45,7 @@ export async function sendScan(
       message:
         error instanceof Error
           ? error.message
-          : 'Gagal terhubung',
+          : "Gagal terhubung ke server",
     };
   }
 }
