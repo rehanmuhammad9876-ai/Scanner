@@ -2,11 +2,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import {
-  BrowserMultiFormatReader,
-  DecodeHintType,
-  BarcodeFormat,
-} from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
+import { DecodeHintType, BarcodeFormat } from '@zxing/library';
 
 export default function Scanner({
   onScan,
