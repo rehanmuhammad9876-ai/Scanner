@@ -1,9 +1,41 @@
+
+const SCRIPT_URL =
+  "https://script.google.com/macros/s/AKfycbybGwVRMmOg0GJCm4NqRDFmJqI1u6aDvpyb9d7DAtrPDtgvvKl4HOaGIeQ655dE7W-8/exec";
+
+export async function GET() {
+  try {
+    const response = await fetch(SCRIPT_URL, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const result = await response.json();
+
+    return Response.json(
+      {
+        ok: response.ok && result?.ok === true,
+        message: result?.message || "Koneksi Google Apps Script berhasil",
+        result,
+      },
+      { status: response.ok ? 200 : 502 }
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Koneksi Google Apps Script gagal",
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
-    const SCRIPT_URL =
-      "https://script.google.com/macros/s/AKfycbybGwVRMmOg0GJCm4NqRDFmJqI1u6aDvpyb9d7DAtrPDtgvvKl4HOaGIeQ655dE7W-8/exec";
 
     const response = await fetch(SCRIPT_URL, {
       method: "POST",
@@ -20,15 +52,15 @@ export async function POST(request: Request) {
       status: response.ok ? 200 : 502,
     });
   } catch (error) {
-  return Response.json(
-    {
-      ok: false,
-      error:
-        error instanceof Error
-          ? error.message
-          : "Gagal mengirim data ke Google Sheet",
-    },
-    { status: 500 }
-  );
+    return Response.json(
+      {
+        ok: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : "Gagal mengirim data ke Google Sheet",
+      },
+      { status: 500 }
+    );
   }
 }
