@@ -1,51 +1,31 @@
-export type ScanPayload = {
-  shelf: string;
-  barcode: string;
-  format: string;
-  timestamp: string;
-};
-
-export type SheetResult = {
-  ok: boolean;
-  message?: string;
-};
-
-export function getSheetUrl(): string {
-  return "/api/sheet";
-}
-
-export async function sendScan(
-  payload: ScanPayload
-): Promise<SheetResult> {
+export async function POST(request) {
   try {
-    const response = await fetch(getSheetUrl(), {
+    const body = await request.json();
+
+    const SCRIPT_URL =
+      "https://script.google.com/macros/s/AKfycbybGwVRMmOg0GJCm4NqRDFmJqI1u6aDvpyb9d7DAtrPDtgvvKl4HOaGIeQ655dE7W-8/exec";
+
+    const response = await fetch(SCRIPT_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "text/plain;charset=utf-8",
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(body),
+      cache: "no-store",
     });
 
     const result = await response.json();
 
-    if (!response.ok || result?.ok === false) {
-      return {
-        ok: false,
-        message: result?.error || result?.message || "Gagal menyimpan data",
-      };
-    }
-
-    return {
-      ok: true,
-      message: result?.message || "Data berhasil dikirim ke Google Sheet",
-    };
+    return Response.json(result, {
+      status: response.ok ? 200 : 502,
+    });
   } catch (error) {
-    return {
-      ok: false,
-      message:
-        error instanceof Error
-          ? error.message
-          : "Gagal terhubung ke server",
-    };
+    return Response.json(
+      {
+        ok: false,
+        error: error.message || "Gagal mengirim data ke Google Sheet",
+      },
+      { status: 500 }
+    );
   }
 }
