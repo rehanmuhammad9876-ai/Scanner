@@ -23,7 +23,7 @@ export default function Scanner({ onScan, onClose }: { onScan: (code: string, fo
         }
       }
     }).catch((e: unknown) => setError(e instanceof Error ? e.message : 'Kamera tidak dapat dibuka'));
-    return () => { active = false; controlsRef.current?.stop(); reader.reset(); };
+    return () => { active = false; controlsRef.current?.stop(); };
   }, [onScan]);
   const toggleTorch = async () => {
     const video = videoRef.current;
