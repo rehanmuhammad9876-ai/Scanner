@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { BrowserMultiFormatReader, DecodeHintType, BarcodeFormat } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 
 export default function Scanner({ onScan, onClose }: { onScan: (code: string, format: string) => void; onClose: () => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -10,9 +10,7 @@ export default function Scanner({ onScan, onClose }: { onScan: (code: string, fo
   const [torchOn, setTorchOn] = useState(false);
   useEffect(() => {
     let active = true;
-    const hints = new Map<DecodeHintType, unknown>();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE, BarcodeFormat.CODE_128, BarcodeFormat.CODE_39, BarcodeFormat.EAN_13, BarcodeFormat.EAN_8, BarcodeFormat.UPC_A, BarcodeFormat.UPC_E]);
-    const reader = new BrowserMultiFormatReader(hints);
+    const reader = new BrowserMultiFormatReader();
     reader.decodeFromVideoDevice(undefined, videoRef.current ?? undefined, (result, err, controls) => {
       if (!active) { controls.stop(); return; }
       controlsRef.current = controls;
