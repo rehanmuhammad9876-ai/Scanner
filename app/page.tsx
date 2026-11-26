@@ -18,11 +18,22 @@ export default function Home() {
  const syncItem = useCallback(async (item: ScanItem) => { setItems((prev: ScanItem[]) => prev.map((x: ScanItem) => x.id === item.id ? {...x, status:'sending', error:undefined} : x)); const result = await sendScan(item); setItems((prev: ScanItem[]) => prev.map((x: ScanItem) => x.id === item.id ? {...x, status:result.ok?'sent':'failed', error:result.message} : x)); }, []);
  const addScan = useCallback(async (code: string, format: string) => { const clean = code.trim(); if (!clean) return; if (scanner === 'shelf') { setShelf(clean.toUpperCase()); setShelfLocked(true); setScanner(null); notify(`Shelf aktif: ${clean}`); window.setTimeout(() => barcodeRef.current?.focus(), 100); return; }
  if (!shelfLocked || !shelf) { setScanner(null); notify('Scan atau isi Shelf terlebih dahulu'); shelfRef.current?.focus(); return; }
- const dup = items.some((item: ScanItem) => item.shelf.toLowerCase() === shelf.toLowerCase() && item.barcode === clean);
- setScanner(null); setBarcode(''); if (dup) { notify('Sudah discan'); window.setTimeout(() => barcodeRef.current?.focus(), 100); return; }
+ setScanner(null);
+setBarcode('');
+
+const timestamp = nowStamp();
+
+const item: ScanItem = {
+  id: `${timestamp}-${Math.random().toString(16).slice(2)}`,
+  shelf,
+  barcode: clean,
+  format,
+  timestamp,
+  status: 'sending'
+};
  const timestamp = nowStamp(); const item: ScanItem = { id: `${timestamp}-${Math.random().toString(16).slice(2)}`, shelf, barcode: clean, format, timestamp, status:'sending' };
  setItems((prev: ScanItem[]) => [item, ...prev]); beep(); if ('vibrate' in navigator) navigator.vibrate(70); notify('Scan berhasil'); window.setTimeout(() => barcodeRef.current?.focus(), 120); await syncItem(item);
- }, [scanner, shelf, shelfLocked, items, notify, syncItem]);
+ }, [scanner, shelf, shelfLocked, notify, syncItem]);
  const submitManual = async (kind: 'shelf'|'barcode') => { if (kind === 'shelf') { const value = shelf.trim(); if (!value) return; setShelf(value.toUpperCase()); setShelfLocked(true); setManualShelf(false); setToast('Shelf aktif'); setTimeout(() => barcodeRef.current?.focus(), 100); } else { if (!barcode.trim()) return; await addScan(barcode.trim(), 'MANUAL'); setManualBarcode(false); } };
  const retry = (item: ScanItem) => void syncItem(item);
  const scanFromCamera = useCallback((code: string, format: string) => { if (Date.now() - debounceRef.current < 800) return; debounceRef.current = Date.now(); void addScan(code, format); }, [addScan]);
