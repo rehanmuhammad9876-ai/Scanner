@@ -28,7 +28,73 @@ export default function Home() {
  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(items)); }, [items]);
  const pending = useMemo(() => items.filter((item: ScanItem) => item.status !== 'sent').length, [items]);
  const notify = useCallback((text: string) => { setToast(text); window.setTimeout(() => setToast(''), 2200); }, []);
- const syncItem = useCallback(async (item: ScanItem) => { setItems((prev: ScanItem[]) => prev.map((x: ScanItem) => x.id === item.id ? {...x, status:'sending', error:undefined} : x)); const result = await sendScan(item); setItems((prev: ScanItem[]) => prev.map((x: ScanItem) => x.id === item.id ? {...x, status:result.ok?'sent':'failed', error:result.message} : x)); }, []);
+  
+const syncItem = useCallback(async (item: ScanItem) => {
+  const sheetStatus =
+    item.sheetStatus ?? (item.status === 'sent' ? 'sent' : 'pending');
+
+  const supabaseStatus =
+    item.supabaseStatus ?? (item.status === 'sent' ? 'sent' : 'pending');
+
+  const sendToSheet = sheetStatus !== 'sent';
+  const sendToSupabase = supabaseStatus !== 'sent';
+
+  setItems((prev: ScanItem[]) =>
+    prev.map((x: ScanItem) =>
+      x.id === item.id
+        ? {
+            ...x,
+            status: 'sending',
+            sheetStatus: sendToSheet ? 'sending' : 'sent',
+            supabaseStatus: sendToSupabase ? 'sending' : 'sent',
+            error: undefined,
+          }
+        : x
+    )
+  );
+
+  const [sheetResult, supabaseResult] = await Promise.all([
+    sendToSheet ? sendScan(item) : Promise.resolve(null),
+    sendToSupabase
+      ? sendScanToSupabase({ ...item, id: item.id })
+      : Promise.resolve(null),
+  ]);
+
+  setItems((prev: ScanItem[]) =>
+    prev.map((x: ScanItem) => {
+      if (x.id !== item.id) return x;
+
+      const finalSheet =
+        sheetResult ? (sheetResult.ok ? 'sent' : 'failed') : sheetStatus;
+
+      const finalSupabase =
+        supabaseResult
+          ? (supabaseResult.ok ? 'sent' : 'failed')
+          : supabaseStatus;
+
+      const allSent =
+        finalSheet === 'sent' && finalSupabase === 'sent';
+
+      const errors = [
+        sheetResult && !sheetResult.ok
+          ? `Google Sheet: ${sheetResult.message}`
+          : '',
+        supabaseResult && !supabaseResult.ok
+          ? `Supabase: ${supabaseResult.message}`
+          : '',
+      ].filter(Boolean);
+
+      return {
+        ...x,
+        sheetStatus: finalSheet,
+        supabaseStatus: finalSupabase,
+        status: allSent ? 'sent' : 'failed',
+        error: errors.join(' | ') || undefined,
+      };
+    })
+  );
+}, []);
+
  const addScan = useCallback(async (code: string, format: string) => { const clean = code.trim(); if (!clean) return; if (scanner === 'shelf') { setShelf(clean.toUpperCase()); setShelfLocked(true); setScanner(null); notify(`Shelf aktif: ${clean}`); window.setTimeout(() => barcodeRef.current?.focus(), 100); return; }
  if (!shelfLocked || !shelf) { setScanner(null); notify('Scan atau isi Shelf terlebih dahulu'); shelfRef.current?.focus(); return; }
  setScanner(null);
@@ -42,9 +108,10 @@ const item: ScanItem = {
   barcode: clean,
   format,
   timestamp,
-  status: 'sending'
+  status: 'sending', 
+  sheetStatus: 'pending', 
+  supabaseStatus: 'pending', 
 };
- const timestamp = nowStamp(); const item: ScanItem = { id: `${timestamp}-${Math.random().toString(16).slice(2)}`, shelf, barcode: clean, format, timestamp, status:'sending' };
  setItems((prev: ScanItem[]) => [item, ...prev]); beep(); if ('vibrate' in navigator) navigator.vibrate(70); notify('Scan berhasil'); window.setTimeout(() => barcodeRef.current?.focus(), 120); await syncItem(item);
  }, [scanner, shelf, shelfLocked, notify, syncItem]);
  const submitManual = async (kind: 'shelf'|'barcode') => { if (kind === 'shelf') { const value = shelf.trim(); if (!value) return; setShelf(value.toUpperCase()); setShelfLocked(true); setManualShelf(false); setToast('Shelf aktif'); setTimeout(() => barcodeRef.current?.focus(), 100); } else { if (!barcode.trim()) return; await addScan(barcode.trim(), 'MANUAL'); setManualBarcode(false); } };
