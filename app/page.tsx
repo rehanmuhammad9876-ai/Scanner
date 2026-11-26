@@ -2,7 +2,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Scanner from '@/components/Scanner';
 import InstallPWA from '@/components/InstallPWA';
-import { sendScan, type ScanPayload } from '@/lib/sheet';
+import {
+  sendScan,
+  sendScanToSupabase,
+  type ScanPayload
+} from '@/lib/sheet';
 
 type ScanItem = ScanPayload & { id: string; status: 'sending'|'sent'|'failed'; error?: string };
 const KEY = 'price_label_scan_items';
