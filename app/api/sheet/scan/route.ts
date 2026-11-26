@@ -20,10 +20,10 @@ if (!body.id) {
     const { error } = await supabase
       .from('scan_records')
       .insert({
-        client_id: body. id, 
+        client_id: body.id, 
         alamat: body.shelf,
         sku: body.barcode,
-        format: body. format || null, 
+        format: body.format || null, 
           e_barcode: null, 
         print: null,
         created_at: body.timestamp || new Date().toISOString(),
