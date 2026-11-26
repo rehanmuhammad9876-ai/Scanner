@@ -11,10 +11,16 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
+if (!body.id) {
+  return Response.json(
+    { ok: false, error: 'ID scan wajib diisi' },
+    { status: 400 }
+  );
+}
     const { error } = await supabase
       .from('scan_records')
       .insert({
+        client_id: body. id, 
         alamat: body.shelf,
         sku: body.barcode,
         format: body. format || null, 
