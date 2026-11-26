@@ -7,8 +7,17 @@ import {
   sendScanToSupabase,
   type ScanPayload
 } from '@/lib/sheet';
+type DeliveryStatus = 'pending' | 'sending' | 'sent' | 'failed';
 
-type ScanItem = ScanPayload & { id: string; status: 'sending'|'sent'|'failed'; error?: string };
+type ScanItem = ScanPayload & {
+  id: string;
+  status: 'sending' | 'sent' | 'failed';
+  sheetStatus?: DeliveryStatus;
+  supabaseStatus?: DeliveryStatus;
+  error?: string;
+  sheetError?: string;
+  supabaseError?: string;
+};
 const KEY = 'price_label_scan_items';
 function nowStamp() { return new Date().toISOString(); }
 function displayTime(timestamp: string) { return new Date(timestamp).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' }); }
