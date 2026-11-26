@@ -49,3 +49,37 @@ export async function sendScan(
     };
   }
 }
+export async function sendScanToSupabase(
+  payload: ScanPayload & { id: string }
+): Promise<SheetResult> {
+  try {
+    const response = await fetch('/api/scan', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || result?.ok === false) {
+      return {
+        ok: false,
+        message: result?.error || result?.message || 'Gagal menyimpan ke Supabase',
+      };
+    }
+
+    return {
+      ok: true,
+      message: result?.message || 'Data berhasil disimpan ke Supabase',
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error instanceof Error
+        ? error.message
+        : 'Gagal terhubung ke Supabase',
+    };
+  }
+}
