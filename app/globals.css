@@ -5,37 +5,8 @@
 body { margin:0; background:#f8fafc; color:#0f172a; }
 button,input { font:inherit; }
 
-/* === ELEGANT ONLY - PRICE LABEL - by Rehan === */
-
-/* 1. Header jadi ramping */
-header {
-  padding-top: 10px !important;
-  padding-bottom: 10px !important;
-  position: relative !important;
-}
-
-/* 2. Judul PRICE LABEL dikecilin biar elegan */
-header h1 {
-  font-size: 19px !important;
-  line-height: 1.1 !important;
-}
-
-/* 3. WAREHOUSE SCANNER -> SCANNER */
-/* Kita sembunyikan teks lamanya, ganti pake CSS */
-header p {
-  font-size: 0 !important;
-}
-header p::after {
-  content: "SCANNER";
-  font-size: 10px !important;
-  letter-spacing: 3px !important;
-  color: #e9d5ff !important;
-  font-weight: 500 !important;
-}
-
-/* 4. Nama lu - pill elegan di kanan atas */
 header::after {
-  content: "Developed by Rehan";
+  content: "Developed by Reyhan";
   position: absolute;
   top: 13px;
   right: 14px;
@@ -47,9 +18,4 @@ header::after {
   padding: 5px 10px;
   border-radius: 999px;
   white-space: nowrap;
-}
-
-/* 5. Card menu jadi lebih halus */
-div[class*="rounded-2xl"], div[class*="rounded-xl"] {
-  border-radius: 18px !important;
 }
