@@ -17,7 +17,8 @@ export async function POST(request: Request) {
       .insert({
         alamat: body.shelf,
         sku: body.barcode,
-        e_barcode: body.format || null,
+        format: body. format || null, 
+          e_barcode: null, 
         print: null,
         created_at: body.timestamp || new Date().toISOString(),
       });
