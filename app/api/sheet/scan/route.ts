@@ -29,6 +29,13 @@ if (!body.id) {
         created_at: body.timestamp || new Date().toISOString(),
       });
 
+        if (error?.code === '23505') {
+      return Response.json({
+        ok: true,
+        message: 'Data scan sudah tersimpan sebelumnya',
+      });
+    }
+
     if (error) {
       throw error;
     }
