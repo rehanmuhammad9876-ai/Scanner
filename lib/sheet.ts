@@ -53,7 +53,7 @@ export async function sendScanToSupabase(
   payload: ScanPayload & { id: string }
 ): Promise<SheetResult> {
   try {
-    const response = await fetch('/api/scan', {
+    const response = await fetch('/api/sheet/scan', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
