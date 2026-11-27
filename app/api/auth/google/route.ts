@@ -31,7 +31,7 @@ export async function GET() {
         'https://www.googleapis.com/auth/drive.file',
       ].join(' '),
       access_type: 'offline',
-      prompt: 'consent',
+      prompt: 'select_account consent',
       include_granted_scopes: 'true',
       state,
     });
