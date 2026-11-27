@@ -11,7 +11,7 @@ export type SheetResult = {
 };
 
 export function getSheetUrl(): string {
-  return "/api/sheet";
+  return "/api/sheet/google";
 }
 
 export async function sendScan(
