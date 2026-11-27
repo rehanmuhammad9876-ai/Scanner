@@ -72,6 +72,34 @@ export default function GoogleSheetConnect() {
     void checkAccount();
   }, [checkAccount]);
 
+  const logoutAccount = async () => {
+    setBusy(true);
+    setMessage('');
+
+    try {
+      const response = await fetch('/api/auth/google/logout', {
+        method: 'POST',
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.ok) {
+        throw new Error('Gagal memutus akun Google');
+      }
+
+      setAccount({ connected: false });
+      setMessage('Akun berhasil diputus. Silakan login dengan akun lain.');
+    } catch (error) {
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : 'Gagal mengganti akun Google'
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const loadPicker = async () => {
     if (window.gapi) {
       await new Promise<void>((resolve) => {
@@ -275,6 +303,15 @@ export default function GoogleSheetConnect() {
                 ? 'Ganti Spreadsheet'
                 : 'Pilih Spreadsheet Toko'}
           </button>
+          
+          <button
+            onClick={() => void logoutAccount()}
+            disabled={busy}
+            className="w-full rounded-xl border border-red-300 p-3 font-bold text-red-700 disabled:opacity-50"
+          >
+            {busy ? 'Memproses...' : 'Ganti Akun Google'}
+          </button>
+
         </>
       ) : (
         <a
