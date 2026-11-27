@@ -17,8 +17,8 @@ function decrypt(text: string, key: Buffer): string {
 
   const decipher = createDecipheriv(
     'aes-256-gcm',
+    key, 
     Buffer.from(ivText, 'base64url'),
-    key
   );
 
   decipher.setAuthTag(Buffer.from(tagText, 'base64url'));
