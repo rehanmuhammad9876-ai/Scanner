@@ -11,25 +11,27 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-if (!body.id) {
-  return Response.json(
-    { ok: false, error: 'ID scan wajib diisi' },
-    { status: 400 }
-  );
-}
+
+    if (!body.id) {
+      return Response.json(
+        { ok: false, error: 'ID scan wajib diisi' },
+        { status: 400 }
+      );
+    }
+
     const { error } = await supabase
       .from('scan_records')
       .insert({
-        client_id: body.id, 
+        client_id: body.id,
         alamat: body.shelf,
         sku: body.barcode,
-        format: body.format || null, 
-          e_barcode: null, 
+        format: body.format || null,
+        e_barcode: null,
         print: null,
         created_at: body.timestamp || new Date().toISOString(),
       });
 
-        if (error?.code === '23505') {
+    if (error?.code === '23505') {
       return Response.json({
         ok: true,
         message: 'Data scan sudah tersimpan sebelumnya',
@@ -44,14 +46,19 @@ if (!body.id) {
       ok: true,
       message: 'Data berhasil disimpan ke Supabase',
     });
-  
+
   } catch (error: any) {
     console.error('SUPABASE SCAN ERROR:', error);
 
     return Response.json(
       {
         ok: false,
-        error: error?.message || error?.details || error?.hint || JSON.stringify(error) || 'Gagal menyimpan data Supabase',
+        error:
+          error?.message ||
+          error?.details ||
+          error?.hint ||
+          JSON.stringify(error) ||
+          'Gagal menyimpan data Supabase',
         code: error?.code || null,
         details: error?.details || null,
         hint: error?.hint || null,
@@ -60,3 +67,4 @@ if (!body.id) {
     );
   }
 }
+
