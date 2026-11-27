@@ -107,11 +107,15 @@ export async function POST(request: NextRequest) {
       throw new Error('Gagal memperbarui akses Google');
     }
 
+    const accessToken = tokens.access_token;
+    const requiredTab = 'PRICE_LABEL_SCAN';
+
+    // 1. Periksa spreadsheet dan daftar tab
     const sheetResponse = await fetch(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}?fields=spreadsheetId,properties.title,sheets.properties`,
       {
         headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         cache: 'no-store',
       }
@@ -126,22 +130,116 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const requiredTab = 'PRICE_LABEL_SCAN';
-    const tabExists = sheetData.sheets?.some(
-      (sheet: { properties?: { title?: string } }) =>
+    let tab = sheetData.sheets?.find(
+      (sheet: { properties?: { title?: string; sheetId?: number } }) =>
         sheet.properties?.title === requiredTab
     );
 
-    if (!tabExists) {
+    // 2. Jika tab belum ada, buat otomatis
+    if (!tab) {
+      const createTabResponse = await fetch(
+        `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}:batchUpdate`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            requests: [
+              {
+                addSheet: {
+                  properties: {
+                    title: requiredTab,
+                  },
+                },
+              },
+            ],
+          }),
+          cache: 'no-store',
+        }
+      );
+
+      const createTabData = await createTabResponse.json();
+
+      if (!createTabResponse.ok) {
+        throw new Error('Gagal membuat tab PRICE_LABEL_SCAN');
+      }
+
+      tab = {
+        properties: {
+          title: requiredTab,
+          sheetId: createTabData.replies?.[0]?.addSheet?.properties?.sheetId,
+        },
+      };
+    }
+
+    // 3. Periksa kolom A sampai D agar data lama tidak tertimpa
+    const checkRange = encodeURIComponent(`${requiredTab}!A:D`);
+
+    const checkResponse = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${checkRange}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        cache: 'no-store',
+      }
+    );
+
+    const checkData = await checkResponse.json();
+
+    if (!checkResponse.ok) {
+      throw new Error('Gagal memeriksa isi spreadsheet');
+    }
+
+    const hasData = (checkData.values || []).some(
+      (row: unknown[]) =>
+        row.some(
+          (cell: unknown) =>
+            cell !== '' && cell !== null && cell !== undefined
+        )
+    );
+
+    if (hasData) {
       return NextResponse.json(
         {
           ok: false,
-          error: `Tab ${requiredTab} tidak ditemukan. Header dan data tidak diubah.`,
+          error:
+            'Tab PRICE_LABEL_SCAN sudah memiliki isi di kolom A-D. Data tidak diubah. Gunakan tab kosong untuk setup otomatis.',
         },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
+    // 4. Buat header dan rumus PRINT
+    const headerRange = encodeURIComponent(`${requiredTab}!A1:D1`);
+
+    const setupResponse = await fetch(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(spreadsheetId)}/values/${headerRange}?valueInputOption=USER_ENTERED`,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          values: [[
+            'SHELF',
+            'SKU',
+            'SHELF,SKU',
+            '={"PRINT";ARRAYFORMULA(IF(B2:B="";"";B2:B&","&1))}',
+          ]],
+        }),
+        cache: 'no-store',
+      }
+    );
+
+    if (!setupResponse.ok) {
+      throw new Error('Gagal membuat header dan rumus PRINT');
+    }
+
+    // 5. Simpan spreadsheet untuk akun toko ini
     const { error: saveError } = await supabase
       .from('google_accounts')
       .update({
@@ -159,6 +257,7 @@ export async function POST(request: NextRequest) {
       ok: true,
       spreadsheetName: sheetData.properties?.title,
       sheetName: requiredTab,
+      message: 'Spreadsheet berhasil disiapkan dengan header dan rumus PRINT',
     });
   } catch (error) {
     console.error(
@@ -167,7 +266,7 @@ export async function POST(request: NextRequest) {
     );
 
     return NextResponse.json(
-      { ok: false, error: 'Gagal menyimpan spreadsheet' },
+      { ok: false, error: 'Gagal menyiapkan spreadsheet' },
       { status: 500 }
     );
   }
