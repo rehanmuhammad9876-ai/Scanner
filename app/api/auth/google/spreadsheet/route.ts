@@ -227,7 +227,7 @@ export async function POST(request: NextRequest) {
           values: [[
             'SHELF',
             'SKU',
-            'SHELF,SKU',
+            'E-BARCODE',
             '={"PRINT";ARRAYFORMULA(IF(B2:B="";"";B2:B&","&1))}',
           ]],
         }),
