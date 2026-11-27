@@ -44,15 +44,18 @@ if (!body.id) {
       ok: true,
       message: 'Data berhasil disimpan ke Supabase',
     });
-  } catch (error) {
+  
+  } catch (error: any) {
+    console.error('SUPABASE SCAN ERROR:', error);
+
     return Response.json(
       {
         ok: false,
-        error: error instanceof Error
-          ? error.message
-          : 'Gagal menyimpan data Supabase',
+        error: error?.message || error?.details || error?.hint || JSON.stringify(error) || 'Gagal menyimpan data Supabase',
+        code: error?.code || null,
+        details: error?.details || null,
+        hint: error?.hint || null,
       },
       { status: 500 }
     );
   }
-}
