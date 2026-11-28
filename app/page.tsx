@@ -214,6 +214,32 @@ const item: ScanItem = {
     setLoginLoading(false);
   }
 };
+  
+const handleLogout = async () => {
+  if (!confirm('Yakin ingin keluar dari akun?')) return;
+
+  try {
+    const response = await fetch('/api/auth/store/logout', {
+      method: 'POST',
+      credentials: 'include',
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      notify(data.error || 'Gagal keluar dari akun');
+      return;
+    }
+
+    setStoreUser(null);
+    setPin('');
+    setLoginError('');
+    notify('Berhasil keluar dari akun');
+  } catch {
+    notify('Koneksi gagal. Silakan coba kembali.');
+  }
+};
+
   if (authLoading) {
   return (
     <main className="min-h-screen flex items-center justify-center bg-slate-50">
@@ -292,7 +318,29 @@ if (!storeUser) {
     </main>
   );
 }
- return <main className="min-h-screen max-w-[480px] mx-auto bg-slate-50 pb-8"><header className="bg-indigo-950 text-white px-4 py-4 sticky top-0 z-20 shadow"><div className="flex items-center justify-between"><div><div className="font-black text-xl tracking-wide">PRICE LABEL</div><div className="text-xs text-indigo-200">SCANNER</div></div><InstallPWA/></div><div className="mt-3 text-sm font-bold text-teal-300">Sync: {pending} tertunda</div><nav className="mt-3 flex gap-2 text-xs"><a className="rounded-lg bg-white/15 px-3 py-2" href="/">Price Label</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/barcode-short">Barcode Pendek</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/stock-take">Stock Take</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/setting">Setting</a></nav></header>
+ return <main className="min-h-screen max-w-[480px] mx-auto bg-slate-50 pb-8"><header className="bg-indigo-950 text-white px-4 py-4 sticky top-0 z-20 shadow">
+   
+<div className="flex items-center justify-between gap-2">
+  <div>
+    <div className="font-black text-xl tracking-wide">PRICE LABEL</div>
+    <div className="text-xs text-indigo-200">SCANNER</div>
+    <div className="text-xs text-teal-300 mt-1">
+      {storeUser.fullName} · {storeUser.storeName}
+    </div>
+  </div>
+
+  <div className="flex items-center gap-2">
+    <InstallPWA />
+    <button
+      onClick={handleLogout}
+      className="rounded-lg bg-red-500 text-white px-3 py-2 text-xs font-bold"
+    >
+      Logout
+    </button>
+  </div>
+</div>
+
+   <div className="mt-3 text-sm font-bold text-teal-300">Sync: {pending} tertunda</div><nav className="mt-3 flex gap-2 text-xs"><a className="rounded-lg bg-white/15 px-3 py-2" href="/">Price Label</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/barcode-short">Barcode Pendek</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/stock-take">Stock Take</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/setting">Setting</a></nav></header>
  <section className="p-4 space-y-4"><GoogleSheetConnect /><div className="rounded-2xl bg-indigo-900 text-white p-4"><div className="text-xs text-indigo-200">SHELF AKTIF</div><div className="text-3xl font-black break-all">{shelfLocked ? shelf : '— Belum dipilih —'}</div>{shelfLocked && <button onClick={() => {setShelf('');setShelfLocked(false);shelfRef.current?.focus();}} className="mt-3 rounded-lg bg-white text-indigo-950 px-4 py-2 font-bold">Ganti Shelf</button>}</div>
  <div className="rounded-2xl bg-white border p-4 space-y-3"><label className="block font-bold text-lg">Shelf</label><input ref={shelfRef} disabled={shelfLocked} value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Contoh AG01-03" className="w-full rounded-xl border-2 p-3 text-lg disabled:bg-slate-100"/><div className="grid grid-cols-2 gap-2"><button onClick={() => setScanner('shelf')} disabled={shelfLocked} className="rounded-xl bg-teal-600 text-white font-bold p-3 disabled:opacity-40">📷 Scan Kamera</button><button onClick={() => setManualShelf(true)} disabled={shelfLocked} className="rounded-xl border-2 p-3 font-bold disabled:opacity-40">✓ Enter Manual</button></div></div>
  <div className="rounded-2xl bg-white border p-4 space-y-3"><label className="block font-bold text-lg">Barcode</label><input ref={barcodeRef} value={barcode} onChange={(e) => setBarcode(e.target.value)} onKeyDown={(e) => {if(e.key==='Enter') void submitManual('barcode');}} placeholder="Scan atau ketik barcode" className="w-full rounded-xl border-2 p-3 text-lg"/><div className="grid grid-cols-2 gap-2"><button onClick={() => setScanner('barcode')} className="rounded-xl bg-teal-600 text-white font-bold p-3">📷 Scan Kamera</button><button onClick={() => setManualBarcode(true)} className="rounded-xl border-2 p-3 font-bold">✓ Enter Manual</button></div></div>
