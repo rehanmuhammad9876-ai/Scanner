@@ -100,7 +100,7 @@ const syncItem = useCallback(async (item: ScanItem) => {
   );
 
   const [sheetResult, supabaseResult] = await Promise.all([
-    sendToSheet ? sendScan(item) : Promise.resolve(null),
+    sendToSheet ? sendScan({ ...item, id: item.id }) : Promise.resolve(null),
     sendToSupabase
       ? sendScanToSupabase({ ...item, id: item.id })
       : Promise.resolve(null),
