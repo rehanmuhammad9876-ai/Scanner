@@ -70,7 +70,9 @@ export async function authenticateStoreUser(
     .eq('is_active', true);
 
   if (storeError || !stores) {
-    throw new Error('Gagal memeriksa data toko');
+  throw new Error(
+    `Gagal memeriksa data toko: ${storeError?.message || 'Data toko tidak ditemukan'}`
+  );
   }
 
   const store = stores.find(
