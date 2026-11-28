@@ -9,7 +9,14 @@ import {
   type ScanPayload
 } from '@/lib/sheet';
 type DeliveryStatus = 'pending' | 'sending' | 'sent' | 'failed';
-
+type StoreUser = {
+  storeId: string;
+  storeName: string;
+  storeCode: string;
+  userId: string;
+  fullName: string;
+  role: 'spv' | 'assistant_spv' | 'staff';
+};
 type ScanItem = ScanPayload & {
   id: string;
   status: 'sending' | 'sent' | 'failed';
