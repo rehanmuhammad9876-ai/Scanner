@@ -15,7 +15,7 @@ export function getSheetUrl(): string {
 }
 
 export async function sendScan(
-  payload: ScanPayload
+  payload: ScanPayload & { id: string }
 ): Promise<SheetResult> {
   try {
     const response = await fetch(getSheetUrl(), {
