@@ -9,6 +9,52 @@ import { supabase } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
 
+export async function GET(request: NextRequest) {
+  try {
+    const token = request.cookies.get(STORE_SESSION_COOKIE)?.value;
+    const session = await getStoreSession(token);
+
+    if (!session) {
+      return NextResponse.json(
+        { ok: false, error: 'Session tidak valid.' },
+        { status: 401 }
+      );
+    }
+
+    if (
+      session.role !== 'spv' &&
+      session.role !== 'assistant_spv'
+    ) {
+      return NextResponse.json(
+        { ok: false, error: 'Anda tidak memiliki izin.' },
+        { status: 403 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from('store_users')
+      .select('id, full_name, role, is_active, created_at')
+      .eq('store_id', session.storeId)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      throw error;
+    }
+
+    return NextResponse.json({
+      ok: true,
+      users: data || [],
+    });
+  } catch (error) {
+    console.error('GET STORE USERS ERROR:', error);
+
+    return NextResponse.json(
+      { ok: false, error: 'Gagal mengambil daftar pengguna.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Periksa session pengguna yang sedang login.
