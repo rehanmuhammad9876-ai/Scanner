@@ -40,6 +40,37 @@ const [pin, setPin] = useState('');
 const [loginLoading, setLoginLoading] = useState(false);
 const [loginError, setLoginError] = useState(''); const [barcode, setBarcode] = useState(''); const [shelfLocked, setShelfLocked] = useState(false); const [scanner, setScanner] = useState<'shelf'|'barcode'|null>(null); const [items, setItems] = useState<ScanItem[]>([]); const [toast, setToast] = useState(''); const [manualShelf, setManualShelf] = useState(false); const [manualBarcode, setManualBarcode] = useState(false); const barcodeRef = useRef<HTMLInputElement>(null); const shelfRef = useRef<HTMLInputElement>(null); const debounceRef = useRef(0);
  useEffect(() => { try { const stored = localStorage.getItem(KEY); if (stored) setItems(JSON.parse(stored) as ScanItem[]); } catch {} }, []);
+  useEffect(() => {
+  let active = true;
+
+  async function checkSession() {
+    try {
+      const response = await fetch('/api/auth/store/me', {
+        method: 'GET',
+        cache: 'no-store',
+        credentials: 'include',
+      });
+
+      const data = await response.json();
+
+      if (!active) return;
+
+      if (data.authenticated && data.user) {
+        setStoreUser(data.user);
+      }
+    } catch {
+      console.error('Gagal memeriksa sesi login');
+    } finally {
+      if (active) setAuthLoading(false);
+    }
+  }
+
+  void checkSession();
+
+  return () => {
+    active = false;
+  };
+}, []);
  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(items)); }, [items]);
  const pending = useMemo(() => items.filter((item: ScanItem) => item.status !== 'sent').length, [items]);
  const notify = useCallback((text: string) => { setToast(text); window.setTimeout(() => setToast(''), 2200); }, []);
@@ -133,6 +164,125 @@ const item: ScanItem = {
  const retry = (item: ScanItem) => void syncItem(item);
  const scanFromCamera = useCallback((code: string, format: string) => { if (Date.now() - debounceRef.current < 800) return; debounceRef.current = Date.now(); void addScan(code, format); }, [addScan]);
  useEffect(() => { const onOnline = () => { items.filter((item: ScanItem) => item.status !== 'sent').forEach((item: ScanItem) => { void syncItem(item); }); }; window.addEventListener('online', onOnline); return () => window.removeEventListener('online', onOnline); }, [items, syncItem]);
+ const handleLogin = async (e: React.FormEvent) => {
+  e.preventDefault();
+  setLoginError('');
+
+  if (!storeCode.trim() || !fullName.trim() || !pin.trim()) {
+    setLoginError('Semua kolom wajib diisi');
+    return;
+  }
+
+  setLoginLoading(true);
+
+  try {
+    const response = await fetch('/api/auth/store/login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify({
+        storeCode,
+        fullName,
+        pin,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      setLoginError(data.error || 'Login gagal');
+      return;
+    }
+
+    setStoreUser(data.user);
+    setPin('');
+    notify('Login berhasil');
+  } catch {
+    setLoginError('Koneksi gagal. Silakan coba kembali.');
+  } finally {
+    setLoginLoading(false);
+  }
+};
+  if (authLoading) {
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-slate-50">
+      <div className="text-center">
+        <div className="font-black text-xl text-indigo-950">
+          PRICE LABEL SCANNER
+        </div>
+        <p className="text-slate-500 mt-2">Memeriksa sesi login...</p>
+      </div>
+    </main>
+  );
+}
+
+if (!storeUser) {
+  return (
+    <main className="min-h-screen max-w-[480px] mx-auto bg-slate-50 flex items-center justify-center p-5">
+      <form
+        onSubmit={handleLogin}
+        className="w-full bg-white rounded-2xl shadow-lg border p-6 space-y-4"
+      >
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-black text-indigo-950">
+            PRICE LABEL
+          </h1>
+          <p className="text-sm text-slate-500">SCANNER</p>
+          <p className="mt-4 font-bold text-lg">Login Pengguna</p>
+        </div>
+
+        <div>
+          <label className="font-bold text-sm">Kode Toko</label>
+          <input
+            value={storeCode}
+            onChange={(e) => setStoreCode(e.target.value)}
+            placeholder="Masukkan kode toko"
+            className="w-full border-2 rounded-xl p-3 mt-1"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="font-bold text-sm">Nama Pengguna</label>
+          <input
+            value={fullName}
+            onChange={(e) => setFullName(e.target.value)}
+            placeholder="Masukkan nama"
+            className="w-full border-2 rounded-xl p-3 mt-1"
+            required
+          />
+        </div>
+
+        <div>
+          <label className="font-bold text-sm">PIN</label>
+          <input
+            type="password"
+            inputMode="numeric"
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            placeholder="Masukkan PIN"
+            className="w-full border-2 rounded-xl p-3 mt-1"
+            required
+          />
+        </div>
+
+        {loginError && (
+          <p className="text-sm text-red-600 font-bold">{loginError}</p>
+        )}
+
+        <button
+          type="submit"
+          disabled={loginLoading}
+          className="w-full rounded-xl bg-indigo-950 text-white p-3 font-bold disabled:opacity-50"
+        >
+          {loginLoading ? 'Memeriksa...' : 'MASUK'}
+        </button>
+      </form>
+    </main>
+  );
+}
  return <main className="min-h-screen max-w-[480px] mx-auto bg-slate-50 pb-8"><header className="bg-indigo-950 text-white px-4 py-4 sticky top-0 z-20 shadow"><div className="flex items-center justify-between"><div><div className="font-black text-xl tracking-wide">PRICE LABEL</div><div className="text-xs text-indigo-200">SCANNER</div></div><InstallPWA/></div><div className="mt-3 text-sm font-bold text-teal-300">Sync: {pending} tertunda</div><nav className="mt-3 flex gap-2 text-xs"><a className="rounded-lg bg-white/15 px-3 py-2" href="/">Price Label</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/barcode-short">Barcode Pendek</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/stock-take">Stock Take</a><a className="rounded-lg bg-white/15 px-3 py-2" href="/setting">Setting</a></nav></header>
  <section className="p-4 space-y-4"><GoogleSheetConnect /><div className="rounded-2xl bg-indigo-900 text-white p-4"><div className="text-xs text-indigo-200">SHELF AKTIF</div><div className="text-3xl font-black break-all">{shelfLocked ? shelf : '— Belum dipilih —'}</div>{shelfLocked && <button onClick={() => {setShelf('');setShelfLocked(false);shelfRef.current?.focus();}} className="mt-3 rounded-lg bg-white text-indigo-950 px-4 py-2 font-bold">Ganti Shelf</button>}</div>
  <div className="rounded-2xl bg-white border p-4 space-y-3"><label className="block font-bold text-lg">Shelf</label><input ref={shelfRef} disabled={shelfLocked} value={shelf} onChange={(e) => setShelf(e.target.value)} placeholder="Contoh AG01-03" className="w-full rounded-xl border-2 p-3 text-lg disabled:bg-slate-100"/><div className="grid grid-cols-2 gap-2"><button onClick={() => setScanner('shelf')} disabled={shelfLocked} className="rounded-xl bg-teal-600 text-white font-bold p-3 disabled:opacity-40">📷 Scan Kamera</button><button onClick={() => setManualShelf(true)} disabled={shelfLocked} className="rounded-xl border-2 p-3 font-bold disabled:opacity-40">✓ Enter Manual</button></div></div>
