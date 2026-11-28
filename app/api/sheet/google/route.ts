@@ -47,7 +47,14 @@ if (!session) {
 
     const shelf = String(body.shelf || '').trim();
     const barcode = String(body.barcode || body.sku || '').trim();
+const scanId = String(body.id || '').trim();
 
+if (!scanId) {
+  return NextResponse.json(
+    { ok: false, error: 'ID scan wajib diisi' },
+    { status: 400 }
+  );
+}
     if (!shelf || !barcode) {
       return NextResponse.json(
         { ok: false, error: 'Shelf atau barcode kosong' },
@@ -113,66 +120,109 @@ if (!session) {
     if (!tokenResponse.ok || !tokens.access_token) {
       throw new Error('Gagal memperbarui akses Google');
     }
+const idRange = encodeURIComponent(`${account.sheet_name}!F:F`);
 
-    const range = encodeURIComponent(`${account.sheet_name}!A:C`);
+const idResponse = await fetch(
+  `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values/${idRange}`,
+  {
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+    },
+    cache: 'no-store',
+  }
+);
 
-    const appendResponse = await fetch(
-      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${tokens.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          values: [[shelf, barcode, `${shelf},${barcode}`]],
-        }),
-        cache: 'no-store',
-      }
-    );
-
-    const appendResult = await appendResponse.json();
-
-    if (!appendResponse.ok) {
-      console.error('Google Sheets append error:', appendResult);
-
-      return NextResponse.json(
-        { ok: false, error: 'Gagal menulis ke Google Sheet toko' },
-        { status: 502 }
-      );
-    }
-const updatedRange = appendResult.updates?.updatedRange;
-const rowMatch = updatedRange?.match(/!A(\d+):C\d+$/);
-
-if (!rowMatch) {
-  throw new Error('Nomor baris hasil scan tidak ditemukan');
+if (!idResponse.ok) {
+  throw new Error('Gagal memeriksa ID scan di Google Sheet');
 }
 
-const rowNumber = rowMatch[1];
+const idResult = await idResponse.json();
+const idValues = idResult.values || [];
 
-const staffResponse = await fetch(
-  `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values/${encodeURIComponent(`${account.sheet_name}!E${rowNumber}`)}?valueInputOption=RAW`,
+const existingIndex = idValues.findIndex(
+  (row: string[]) => row[0] === scanId
+);
+
+const existingRow = existingIndex >= 0
+  ? existingIndex + 1
+  : null;
+    const range = encodeURIComponent(`${account.sheet_name}!A:C`);
+
+    
+let rowNumber: number;
+
+if (existingRow !== null) {
+  // Scan ini sudah pernah dikirim: gunakan baris yang sama.
+  rowNumber = existingRow;
+} else {
+  // Scan baru: tambahkan data ke A-C.
+  const appendResponse = await fetch(
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values/${range}:append?valueInputOption=RAW&insertDataOption=INSERT_ROWS`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${tokens.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        values: [[shelf, barcode, `${shelf},${barcode}`]],
+      }),
+      cache: 'no-store',
+    }
+  );
+
+  const appendResult = await appendResponse.json();
+
+  if (!appendResponse.ok) {
+    console.error('Google Sheets append error:', appendResult);
+    throw new Error('Gagal menulis data ke Google Sheet');
+  }
+
+  const updatedRange = appendResult.updates?.updatedRange;
+  const rowMatch = updatedRange?.match(/!A(\d+):C\d+$/);
+
+  if (!rowMatch) {
+    throw new Error('Nomor baris hasil scan tidak ditemukan');
+  }
+
+  rowNumber = Number(rowMatch[1]);
+}
+
+// Tulis nama staf di kolom E dan ID scan di kolom F.
+const staffAndIdResponse = await fetch(
+  `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values:batchUpdate`,
   {
-    method: 'PUT',
+    method: 'POST',
     headers: {
       Authorization: `Bearer ${tokens.access_token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      values: [[session.fullName]],
+      valueInputOption: 'RAW',
+      data: [
+        {
+          range: `${account.sheet_name}!E${rowNumber}:F${rowNumber}`,
+          values: [[session.fullName, scanId]],
+        },
+      ],
     }),
     cache: 'no-store',
   }
 );
 
-if (!staffResponse.ok) {
-  console.error('Google Sheets staff name error:', await staffResponse.text());
-  throw new Error('Gagal menyimpan nama staf');
+if (!staffAndIdResponse.ok) {
+  console.error(
+    'Google Sheets staff and ID error:',
+    await staffAndIdResponse.text()
+  );
+  throw new Error('Gagal menyimpan nama staf dan ID scan');
 }
-    return NextResponse.json({
+
+        return NextResponse.json({
       ok: true,
       message: 'Data berhasil dikirim ke Google Sheet toko',
     });
+
   } catch (error) {
     console.error(
       'Google Sheets scan error:',
