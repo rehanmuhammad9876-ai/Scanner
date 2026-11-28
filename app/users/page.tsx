@@ -84,6 +84,71 @@ export default function UsersPage() {
     }
   };
 
+const updateUser = async (
+  user: StoreUser,
+  action: 'reset_pin' | 'set_active'
+) => {
+  let body: {
+    userId: string;
+    action: string;
+    pin?: string;
+    isActive?: boolean;
+  } = {
+    userId: user.id,
+    action,
+  };
+
+  if (action === 'reset_pin') {
+    const newPin = window.prompt(
+      `Masukkan PIN baru untuk ${user.full_name} (6 angka):`
+    );
+
+    if (newPin === null) return;
+
+    if (!/^\d{6}$/.test(newPin)) {
+      setMessage('PIN harus terdiri dari 6 angka.');
+      return;
+    }
+
+    body.pin = newPin;
+  } else {
+    const nextStatus = !user.is_active;
+
+    if (
+      !window.confirm(
+        nextStatus
+          ? `Aktifkan kembali akun ${user.full_name}?`
+          : `Nonaktifkan akun ${user.full_name}?`
+      )
+    ) return;
+
+    body.isActive = nextStatus;
+  }
+
+  try {
+    const response = await fetch('/api/auth/store/users', {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.ok) {
+      setMessage(data.error || 'Gagal memperbarui akun.');
+      return;
+    }
+
+    setMessage(data.message);
+    await loadUsers();
+  } catch {
+    setMessage('Koneksi gagal. Silakan coba kembali.');
+  }
+};
+
   return (
     <main className="min-h-screen bg-slate-100 p-4">
       <div className="mx-auto max-w-xl space-y-4">
@@ -187,6 +252,29 @@ export default function UsersPage() {
                     {' · '}
                     {user.is_active ? 'Aktif' : 'Nonaktif'}
                   </div>
+                  
+{user.role === 'staff' && (
+  <div className="mt-3 grid grid-cols-2 gap-2">
+    <button
+      onClick={() => void updateUser(user, 'reset_pin')}
+      className="rounded-lg bg-indigo-100 p-2 text-sm font-bold text-indigo-900"
+    >
+      Reset PIN
+    </button>
+
+    <button
+      onClick={() => void updateUser(user, 'set_active')}
+      className={`rounded-lg p-2 text-sm font-bold ${
+        user.is_active
+          ? 'bg-red-100 text-red-700'
+          : 'bg-teal-100 text-teal-700'
+      }`}
+    >
+      {user.is_active ? 'Nonaktifkan' : 'Aktifkan'}
+    </button>
+  </div>
+)}
+
                 </article>
               ))}
             </div>
