@@ -219,6 +219,9 @@ export async function revokeStoreSession(
     .is('revoked_at', null);
 
   if (error) {
-    throw new Error('Gagal mengakhiri session pengguna');
+  console.error('REVOKE SESSION ERROR:', error);
+  throw new Error(
+    `Gagal mengakhiri session pengguna: ${error.message} (Code: ${error.code})`
+  );
   }
 }
