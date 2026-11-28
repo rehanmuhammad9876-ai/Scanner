@@ -31,7 +31,14 @@ function nowStamp() { return new Date().toISOString(); }
 function displayTime(timestamp: string) { return new Date(timestamp).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit', second:'2-digit' }); }
 function beep() { try { const Ctx = window.AudioContext; const ctx = new Ctx(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.frequency.value = 880; gain.gain.value = 0.07; osc.connect(gain); gain.connect(ctx.destination); osc.start(); osc.stop(ctx.currentTime + .09); } catch {} }
 export default function Home() {
- const [shelf, setShelf] = useState(''); const [barcode, setBarcode] = useState(''); const [shelfLocked, setShelfLocked] = useState(false); const [scanner, setScanner] = useState<'shelf'|'barcode'|null>(null); const [items, setItems] = useState<ScanItem[]>([]); const [toast, setToast] = useState(''); const [manualShelf, setManualShelf] = useState(false); const [manualBarcode, setManualBarcode] = useState(false); const barcodeRef = useRef<HTMLInputElement>(null); const shelfRef = useRef<HTMLInputElement>(null); const debounceRef = useRef(0);
+ const [shelf, setShelf] = useState('');const [storeUser, setStoreUser] = useState<StoreUser | null>(null);
+const [authLoading, setAuthLoading] = useState(true);
+
+const [storeCode, setStoreCode] = useState('');
+const [fullName, setFullName] = useState('');
+const [pin, setPin] = useState('');
+const [loginLoading, setLoginLoading] = useState(false);
+const [loginError, setLoginError] = useState(''); const [barcode, setBarcode] = useState(''); const [shelfLocked, setShelfLocked] = useState(false); const [scanner, setScanner] = useState<'shelf'|'barcode'|null>(null); const [items, setItems] = useState<ScanItem[]>([]); const [toast, setToast] = useState(''); const [manualShelf, setManualShelf] = useState(false); const [manualBarcode, setManualBarcode] = useState(false); const barcodeRef = useRef<HTMLInputElement>(null); const shelfRef = useRef<HTMLInputElement>(null); const debounceRef = useRef(0);
  useEffect(() => { try { const stored = localStorage.getItem(KEY); if (stored) setItems(JSON.parse(stored) as ScanItem[]); } catch {} }, []);
  useEffect(() => { localStorage.setItem(KEY, JSON.stringify(items)); }, [items]);
  const pending = useMemo(() => items.filter((item: ScanItem) => item.status !== 'sent').length, [items]);
