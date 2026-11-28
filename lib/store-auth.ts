@@ -101,10 +101,6 @@ export async function authenticateStoreUser(
   ? verifyPin(pin, user.pin_hash)
   : false;
 
-console.log('STORE LOGIN CHECK:', {
-  userFound: !!user,
-  pinValid,
-});
 
 if (!user || !pinValid) {
   return null;
