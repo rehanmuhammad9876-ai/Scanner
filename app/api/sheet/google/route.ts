@@ -233,13 +233,10 @@ const staffResponse = await fetch(
 if (!staffResponse.ok) {
   throw new Error('Gagal menyimpan nama staf');
 }
-
-
-        return NextResponse.json({
-      ok: true,
-      message: 'Data berhasil dikirim ke Google Sheet toko',
-    });
-
+return NextResponse.json({
+  ok: true,
+  message: 'Data berhasil dikirim ke Google Sheet toko',
+});
   } catch (error) {
     console.error(
       'Google Sheets scan error:',
