@@ -235,14 +235,6 @@ if (!staffResponse.ok) {
 }
 
 
-if (!staffAndIdResponse.ok) {
-  console.error(
-    'Google Sheets staff and ID error:',
-    await staffAndIdResponse.text()
-  );
-  throw new Error('Gagal menyimpan nama staf dan ID scan');
-}
-
         return NextResponse.json({
       ok: true,
       message: 'Data berhasil dikirim ke Google Sheet toko',
