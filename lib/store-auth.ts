@@ -28,6 +28,13 @@ export function hashPin(pin: string): string {
   return `scrypt$${salt}$${hash}`;
 }
 
+export function createPinHash(pin: string): string {
+  const salt = randomBytes(16).toString('hex');
+  const hash = scryptSync(pin, salt, 64).toString('hex');
+
+  return `scrypt$${salt}$${hash}`;
+}
+
 // Memeriksa PIN terhadap hash yang tersimpan.
 export function verifyPin(pin: string, storedHash: string): boolean {
   try {
