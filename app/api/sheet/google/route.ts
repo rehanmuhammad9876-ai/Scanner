@@ -1,7 +1,9 @@
-
 import { NextRequest, NextResponse } from 'next/server';
 import { createDecipheriv } from 'crypto';
-import { getGoogleSession } from '@/lib/google-auth';
+import {
+  getStoreSession,
+  STORE_SESSION_COOKIE,
+} from '@/lib/store-auth';
 import { supabase } from '@/lib/supabase';
 
 export const runtime = 'nodejs';
@@ -31,14 +33,15 @@ function decrypt(text: string, key: Buffer): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = getGoogleSession(request);
+    const storeToken = request.cookies.get(STORE_SESSION_COOKIE)?.value;
+const session = await getStoreSession(storeToken);
 
-    if (!session) {
-      return NextResponse.json(
-        { ok: false, error: 'Silakan login Google terlebih dahulu' },
-        { status: 401 }
-      );
-    }
+if (!session) {
+  return NextResponse.json(
+    { ok: false, error: 'Sesi toko tidak valid. Silakan login kembali.' },
+    { status: 401 }
+  );
+}
 
     const body = await request.json();
 
@@ -67,10 +70,10 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: account, error } = await supabase
-      .from('google_accounts')
-      .select('refresh_token_enc, spreadsheet_id, sheet_name')
-      .eq('google_sub', session.sub)
-      .maybeSingle();
+  .from('google_accounts')
+  .select('refresh_token_enc, spreadsheet_id, sheet_name')
+  .eq('store_id', session.storeId)
+  .maybeSingle();
 
     if (error || !account?.refresh_token_enc) {
       return NextResponse.json(
@@ -138,7 +141,34 @@ export async function POST(request: NextRequest) {
         { status: 502 }
       );
     }
+const updatedRange = appendResult.updates?.updatedRange;
+const rowMatch = updatedRange?.match(/!A(\d+):C\d+$/);
 
+if (!rowMatch) {
+  throw new Error('Nomor baris hasil scan tidak ditemukan');
+}
+
+const rowNumber = rowMatch[1];
+
+const staffResponse = await fetch(
+  `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values/${encodeURIComponent(`${account.sheet_name}!E${rowNumber}`)}?valueInputOption=RAW`,
+  {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      values: [[session.fullName]],
+    }),
+    cache: 'no-store',
+  }
+);
+
+if (!staffResponse.ok) {
+  console.error('Google Sheets staff name error:', await staffResponse.text());
+  throw new Error('Gagal menyimpan nama staf');
+}
     return NextResponse.json({
       ok: true,
       message: 'Data berhasil dikirim ke Google Sheet toko',
