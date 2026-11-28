@@ -188,27 +188,52 @@ if (existingRow !== null) {
   rowNumber = Number(rowMatch[1]);
 }
 
-// Tulis nama staf di kolom E dan ID scan di kolom F.
-const staffAndIdResponse = await fetch(
-  `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values:batchUpdate`,
+// 1. Simpan ID scan lebih dahulu ke kolom F
+const idWriteRange = encodeURIComponent(
+  `${account.sheet_name}!F${rowNumber}`
+);
+
+const idWriteResponse = await fetch(
+  `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values/${idWriteRange}?valueInputOption=RAW`,
   {
-    method: 'POST',
+    method: 'PUT',
     headers: {
       Authorization: `Bearer ${tokens.access_token}`,
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      valueInputOption: 'RAW',
-      data: [
-        {
-          range: `${account.sheet_name}!E${rowNumber}:F${rowNumber}`,
-          values: [[session.fullName, scanId]],
-        },
-      ],
+      values: [[scanId]],
     }),
-    cache: 'no-store',
   }
 );
+
+if (!idWriteResponse.ok) {
+  throw new Error('Gagal menyimpan ID scan');
+}
+
+// 2. Setelah ID tersimpan, tulis nama staf ke kolom E
+const staffRange = encodeURIComponent(
+  `${account.sheet_name}!E${rowNumber}`
+);
+
+const staffResponse = await fetch(
+  `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(account.spreadsheet_id)}/values/${staffRange}?valueInputOption=RAW`,
+  {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${tokens.access_token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      values: [[session.fullName]],
+    }),
+  }
+);
+
+if (!staffResponse.ok) {
+  throw new Error('Gagal menyimpan nama staf');
+}
+
 
 if (!staffAndIdResponse.ok) {
   console.error(
