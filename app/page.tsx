@@ -39,6 +39,7 @@ const [fullName, setFullName] = useState('');
 const [pin, setPin] = useState('');
 const [loginLoading, setLoginLoading] = useState(false);
 const [loginError, setLoginError] = useState(''); const [barcode, setBarcode] = useState(''); const [shelfLocked, setShelfLocked] = useState(false); const [scanner, setScanner] = useState<'shelf'|'barcode'|null>(null); const [items, setItems] = useState<ScanItem[]>([]); const [toast, setToast] = useState(''); const [manualShelf, setManualShelf] = useState(false); const [manualBarcode, setManualBarcode] = useState(false); const barcodeRef = useRef<HTMLInputElement>(null); const shelfRef = useRef<HTMLInputElement>(null); const debounceRef = useRef(0);
+  const syncingIdsRef = useRef<Set<string>>(new Set());
  useEffect(() => { try { const stored = localStorage.getItem(KEY); if (stored) setItems(JSON.parse(stored) as ScanItem[]); } catch {} }, []);
   useEffect(() => {
   let active = true;
@@ -76,6 +77,11 @@ const [loginError, setLoginError] = useState(''); const [barcode, setBarcode] = 
  const notify = useCallback((text: string) => { setToast(text); window.setTimeout(() => setToast(''), 2200); }, []);
   
 const syncItem = useCallback(async (item: ScanItem) => {
+  if (syncingIdsRef.current.has(item.id)) return;
+
+syncingIdsRef.current.add(item.id);
+
+try {
   const sheetStatus =
     item.sheetStatus ?? (item.status === 'sent' ? 'sent' : 'pending');
 
@@ -139,6 +145,9 @@ const syncItem = useCallback(async (item: ScanItem) => {
       };
     })
   );
+} finally {
+  syncingIdsRef.current.delete(item.id) ;
+}
 }, []);
 
  const addScan = useCallback(async (code: string, format: string) => { const clean = code.trim(); if (!clean) return; if (scanner === 'shelf') { setShelf(clean.toUpperCase()); setShelfLocked(true); setScanner(null); notify(`Shelf aktif: ${clean}`); window.setTimeout(() => barcodeRef.current?.focus(), 100); return; }
