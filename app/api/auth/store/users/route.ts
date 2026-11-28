@@ -55,6 +55,113 @@ export async function GET(request: NextRequest) {
   }
 }
 
+export async function PATCH(request: NextRequest) {
+  try {
+    const token = request.cookies.get(STORE_SESSION_COOKIE)?.value;
+    const session = await getStoreSession(token);
+
+    if (!session) {
+      return NextResponse.json(
+        { ok: false, error: 'Session tidak valid.' },
+        { status: 401 }
+      );
+    }
+
+    if (
+      session.role !== 'spv' &&
+      session.role !== 'assistant_spv'
+    ) {
+      return NextResponse.json(
+        { ok: false, error: 'Anda tidak memiliki izin.' },
+        { status: 403 }
+      );
+    }
+
+    const body = await request.json();
+    const userId =
+      typeof body.userId === 'string' ? body.userId.trim() : '';
+
+    if (!userId) {
+      return NextResponse.json(
+        { ok: false, error: 'ID Staff tidak ditemukan.' },
+        { status: 400 }
+      );
+    }
+
+    let changes: { pin_hash?: string; is_active?: boolean };
+    let message = '';
+
+    if (body.action === 'reset_pin') {
+      const pin = typeof body.pin === 'string' ? body.pin.trim() : '';
+
+      if (!/^\d{6}$/.test(pin)) {
+        return NextResponse.json(
+          { ok: false, error: 'PIN harus terdiri dari 6 angka.' },
+          { status: 400 }
+        );
+      }
+
+      changes = { pin_hash: createPinHash(pin) };
+      message = 'PIN Staff berhasil diperbarui.';
+    } else if (body.action === 'set_active') {
+      if (typeof body.isActive !== 'boolean') {
+        return NextResponse.json(
+          { ok: false, error: 'Status akun tidak valid.' },
+          { status: 400 }
+        );
+      }
+
+      changes = { is_active: body.isActive };
+      message = body.isActive
+        ? 'Akun Staff berhasil diaktifkan.'
+        : 'Akun Staff berhasil dinonaktifkan.';
+    } else {
+      return NextResponse.json(
+        { ok: false, error: 'Aksi tidak dikenal.' },
+        { status: 400 }
+      );
+    }
+
+    // Hanya akun Staff di toko yang sedang login yang boleh diubah.
+    const { data, error } = await supabase
+      .from('store_users')
+      .update(changes)
+      .eq('id', userId)
+      .eq('store_id', session.storeId)
+      .eq('role', 'staff')
+      .select('id, full_name, role, is_active')
+      .maybeSingle();
+
+    if (error) {
+      console.error('UPDATE STAFF ERROR:', error);
+      return NextResponse.json(
+        { ok: false, error: 'Gagal memperbarui akun Staff.' },
+        { status: 500 }
+      );
+    }
+
+    if (!data) {
+      return NextResponse.json(
+        { ok: false, error: 'Akun Staff tidak ditemukan.' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      ok: true,
+      message,
+      user: data,
+    });
+  } catch (error) {
+    console.error('UPDATE STAFF ERROR:', error);
+
+    return NextResponse.json(
+      { ok: false, error: 'Terjadi kesalahan saat memperbarui Staff.' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Periksa session pengguna yang sedang login.
