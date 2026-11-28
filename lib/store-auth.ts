@@ -97,9 +97,18 @@ export async function authenticateStoreUser(
       item.full_name.trim().toLowerCase() === cleanName.toLowerCase()
   );
 
-  if (!user || !verifyPin(pin, user.pin_hash)) {
-    return null;
-  }
+  const pinValid = user
+  ? verifyPin(pin, user.pin_hash)
+  : false;
+
+console.log('STORE LOGIN CHECK:', {
+  userFound: !!user,
+  pinValid,
+});
+
+if (!user || !pinValid) {
+  return null;
+}
 
   return {
     userId: user.id,
